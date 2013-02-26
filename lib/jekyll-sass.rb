@@ -36,6 +36,14 @@ module Jekyll
       def write(dest)
         config = SassConfig.get()
         dest_path = destination(dest)
+        load_paths = ["#{@site.source}#{@dir}"]
+        if config['load_paths']
+          if config['load_paths'].is_a? Array
+            load_paths = config['load_paths'] + load_paths
+          else
+            load_paths = [config['load_paths']] + load_paths
+          end
+        end
 
         return false if File.exist? dest_path and !modified?
         @@mtimes[path] = mtime
@@ -43,7 +51,7 @@ module Jekyll
         FileUtils.mkdir_p(File.dirname(dest_path))
         begin
           content = File.read(path)
-          engine = ::Sass::Engine.new( content, :syntax => config['syntax'], :load_paths => ["#{@site.source}#{@dir}"], :style => config['style'] )
+          engine = ::Sass::Engine.new( content, :syntax => config['syntax'], :load_paths => load_paths, :style => config['style'] )
           content = engine.render
           File.open(dest_path, 'w') do |f|
             f.write(content)
