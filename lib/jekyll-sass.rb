@@ -65,7 +65,7 @@ module Jekyll
         default_load_path = "#{@site.source}#{@dir}"
         if config[:load_paths]
           config[:load_paths] = [config[:load_paths]] unless config[:load_paths].is_a? Array
-          return config[:load_paths] if config[:load_paths].include?(default_load_path)
+          return config if config[:load_paths].include?(default_load_path)
           config[:load_paths] = config[:load_paths] << default_load_path
         else
           config[:load_paths] = [default_load_path]
