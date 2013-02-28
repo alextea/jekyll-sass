@@ -10,7 +10,10 @@ module Jekyll
         if Jekyll.configuration({}).has_key?('sass')
           config.merge!(Jekyll.configuration({})['sass']) {|key,v1,v2| v2.to_sym}
         end
-        config
+        config.inject({}) do |memo,(k,v)|
+          memo[k.to_sym] = v
+          memo
+        end
       end
 
       def self.get()
@@ -25,7 +28,7 @@ module Jekyll
       #
       # Returns destination file path.
       def destination(dest)
-        syntax = SassConfig.get()['syntax'].to_s
+        syntax = SassConfig.get()[:syntax].to_s
         File.join(dest, @dir, @name.sub(/#{syntax}$/, 'css'))
       end
 
@@ -34,16 +37,8 @@ module Jekyll
       #
       # Returns false if the file was not modified since last time (no-op).
       def write(dest)
-        config = SassConfig.get()
+        config = add_default_load_path_to_config(SassConfig.get())
         dest_path = destination(dest)
-        load_paths = ["#{@site.source}#{@dir}"]
-        if config['load_paths']
-          if config['load_paths'].is_a? Array
-            load_paths = config['load_paths'] + load_paths
-          else
-            load_paths = [config['load_paths']] + load_paths
-          end
-        end
 
         return false if File.exist? dest_path and !modified?
         @@mtimes[path] = mtime
@@ -53,7 +48,7 @@ module Jekyll
         begin
           STDOUT.puts "Compiling Sass '#{path}'"
           content = File.read(path)
-          engine = ::Sass::Engine.new( content, :syntax => config['syntax'], :load_paths => load_paths, :style => config['style'] )
+          engine = ::Sass::Engine.new(content, config)
           content = engine.render
           File.open(dest_path, 'w') do |f|
             f.write(content)
@@ -66,6 +61,17 @@ module Jekyll
         true
       end
 
+      def add_default_load_path_to_config(config)
+        default_load_path = "#{@site.source}#{@dir}"
+        if config[:load_paths]
+          config[:load_paths] = [config[:load_paths]] unless config[:load_paths].is_a? Array
+          return config[:load_paths] if config[:load_paths].include?(default_load_path)
+          config[:load_paths] = config[:load_paths] << default_load_path
+        else
+          config[:load_paths] = [default_load_path]
+        end
+        config
+      end
     end
 
     class SassCssGenerator < Generator
@@ -75,7 +81,7 @@ module Jekyll
       # objects to the static_files array.  Here we replace those with a
       # SassCssFile object.
       def generate(site)
-        syntax = SassConfig.get()['syntax'].to_s
+        syntax = SassConfig.get()[:syntax].to_s
         site.static_files.clone.each do |sf|
           if sf.kind_of?(Jekyll::StaticFile) && sf.path =~ /\.#{syntax}$/
             site.static_files.delete(sf)
