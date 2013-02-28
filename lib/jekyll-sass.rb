@@ -49,7 +49,9 @@ module Jekyll
         @@mtimes[path] = mtime
 
         FileUtils.mkdir_p(File.dirname(dest_path))
+
         begin
+          STDOUT.puts "Compiling Sass '#{path}'"
           content = File.read(path)
           engine = ::Sass::Engine.new( content, :syntax => config['syntax'], :load_paths => load_paths, :style => config['style'] )
           content = engine.render
